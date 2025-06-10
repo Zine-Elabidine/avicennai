@@ -1,0 +1,213 @@
+version: '3.3'
+
+services:
+  api:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "8002:8000"
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+      - redis
+    restart: always
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - avicennai-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/engine/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+      - redis
+    restart: always
+    command: celery -A app.core.celery_app worker --loglevel=info
+    networks:
+      - avicennai-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+
+  worker-llm:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+      - redis
+    restart: always
+    command: celery -A app.core.celery_app worker --loglevel=info --queues=llm_queue --concurrency=2
+    networks:
+      - avicennai-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+
+  worker-agent:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+      - redis
+    restart: always
+    command: celery -A app.core.celery_app worker --loglevel=info --queues=agent_queue --concurrency=2
+    networks:
+      - avicennai-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+
+  flower:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+      - redis
+      - worker
+    restart: always
+    # Add a delay to ensure RabbitMQ is ready
+    command: >
+      bash -c "
+        echo 'Waiting for RabbitMQ to be ready...' &&
+        sleep 15 &&
+        celery -A app.core.celery_app flower --port=5555
+      "
+    networks:
+      - avicennai-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=e41e91f4_898b_4a0b_919b_c424d5a38288
+      - RABBITMQ_DEFAULT_PASS=9f84c8abd78c4ec7b36b5173c0073584
+    restart: always
+    networks:
+      - avicennai-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: always
+    networks:
+      - avicennai-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Add a service for scheduled tasks
+  beat:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+      - redis
+    restart: always
+    # Add a delay to ensure RabbitMQ is ready
+    command: >
+      bash -c "
+        echo 'Waiting for RabbitMQ to be ready...' &&
+        sleep 10 &&
+        celery -A app.core.celery_app beat --loglevel=info
+      "
+    networks:
+      - avicennai-network
+
+  # Optional: Add Prometheus for monitoring
+  #prometheus:
+  #  image: prom/prometheus:latest
+  #  volumes:
+  #    - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  #    - prometheus-data:/prometheus
+  #  ports:
+  #    - "9090:9090"
+  #  networks:
+  #    - avicennai-network
+  #  depends_on:
+  #    - api
+  #  command:
+  #    - '--config.file=/etc/prometheus/prometheus.yml'
+  #    - '--storage.tsdb.path=/prometheus'
+  #    - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+  #    - '--web.console.templates=/usr/share/prometheus/consoles'
+
+  # Optional: Add Grafana for visualization
+  #grafana:
+  #  image: grafana/grafana:latest
+  #  volumes:
+  #    - grafana-data:/var/lib/grafana
+  #  ports:
+  #    - "3000:3000"
+  #  networks:
+  #    - avicennai-network
+  #  depends_on:
+  #    - prometheus
+
+volumes:
+  rabbitmq-data:
+  redis-data:
+  #prometheus-data:
+  #grafana-data:
+
+networks:
+  avicennai-network:
+    driver: bridge

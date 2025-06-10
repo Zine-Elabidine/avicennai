@@ -1,0 +1,100 @@
+2025-06-09 19:00:01,131 [WARNING] kombu.connection: No hostname was supplied. Reverting to default 'localhost'
+2025-06-09 19:01:30,739 [WARNING] kombu.connection: No hostname was supplied. Reverting to default 'localhost'
+2025-06-09 19:04:57,612 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-09 19:05:07,126 [INFO] TheHive4API: Creating case: 'BatTamper Malware Detection on host_8291' (severity: 1)
+2025-06-09 19:05:09,379 [INFO] TheHive4API: Case created: ID ~81932288
+2025-06-09 19:05:13,975 [INFO] TheHive4API: Adding hash observable to case ~81932288
+2025-06-09 19:05:13,976 [INFO] TheHive4API: Adding hash observable to case ~81932288
+2025-06-09 19:05:13,983 [INFO] TheHive4API: Adding filename observable to case ~81932288
+2025-06-09 19:05:13,990 [INFO] TheHive4API: Adding hostname observable to case ~81932288
+2025-06-09 19:05:16,504 [INFO] TheHive4API: Observable added to case ~81932288: ID ~81936608
+2025-06-09 19:05:17,319 [INFO] TheHive4API: Observable added to case ~81932288: ID ~81936392
+2025-06-09 19:05:18,373 [INFO] TheHive4API: Observable added to case ~81932288: ID ~20624
+2025-06-09 19:05:19,210 [INFO] TheHive4API: Observable added to case ~81932288: ID ~81936504
+2025-06-09 19:05:24,975 [INFO] SOCAgent: Calling tool virustotal_lookup with query: 748b1f2468f8af45cc3bd1ec0b6dc967a27f2efe1e58882f58821a5279cbf78c
+2025-06-09 19:05:36,307 [INFO] TheHive4API: Creating task 'Investigate host_8291 for further compromise' for case ~81932288
+2025-06-09 19:05:36,309 [INFO] TheHive4API: Creating task 'Perform full AV scan on host_8291' for case ~81932288
+2025-06-09 19:05:36,314 [INFO] TheHive4API: Creating task 'Isolate host_8291 (if necessary)' for case ~81932288
+2025-06-09 19:05:36,324 [INFO] TheHive4API: Flagging case ~81932288
+2025-06-09 19:05:39,328 [INFO] TheHive4API: Task created in case ~81932288
+2025-06-09 19:05:40,792 [INFO] TheHive4API: Task created in case ~81932288
+2025-06-09 19:05:41,758 [INFO] TheHive4API: Task created in case ~81932288
+2025-06-09 19:05:42,399 [INFO] TheHive4API: Case ~81932288 flagged successfully
+2025-06-09 19:05:44,741 [INFO] TheHive4API: Updating case ~81932288
+2025-06-09 19:05:46,256 [INFO] TheHive4API: Case ~81932288 updated successfully
+2025-06-09 19:05:58,343 [INFO] avicennai: Request completed - ID: unknown - Time: 60.7312s
+2025-06-09 19:07:34,609 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-09 19:07:39,634 [INFO] TheHive4API: Creating case: 'BatTamper Malware Detection on host_8291' (severity: 1)
+2025-06-09 19:07:43,282 [INFO] TheHive4API: Case created: ID ~122904680
+2025-06-09 19:07:46,661 [INFO] TheHive4API: Adding hostname observable to case ~122904680
+2025-06-09 19:07:46,667 [INFO] TheHive4API: Adding hash observable to case ~122904680
+2025-06-09 19:07:46,676 [INFO] TheHive4API: Adding filename observable to case ~122904680
+2025-06-09 19:07:46,677 [INFO] TheHive4API: Adding hash observable to case ~122904680
+2025-06-09 19:07:48,648 [INFO] TheHive4API: Observable added to case ~122904680: ID ~81944800
+2025-06-09 19:07:49,100 [INFO] TheHive4API: Observable added to case ~122904680: ID ~37008
+2025-06-09 19:07:49,549 [INFO] TheHive4API: Observable added to case ~122904680: ID ~122900552
+2025-06-09 19:07:49,994 [INFO] TheHive4API: Observable added to case ~122904680: ID ~81948792
+2025-06-09 19:07:52,651 [INFO] SOCAgent: Calling tool websearch threat with query: BatTamper malware
+2025-06-09 19:07:52,659 [INFO] SOCAgent: Calling tool virustotal_lookup with query: 748b1f2468f8af45cc3bd1ec0b6dc967a27f2efe1e58882f58821a5279cbf78c
+2025-06-09 19:08:21,195 [INFO] TheHive4API: Creating task 'Isolate host_8291' for case ~122904680
+2025-06-09 19:08:21,202 [INFO] TheHive4API: Creating task 'Perform Full AV Scan on host_8291' for case ~122904680
+2025-06-09 19:08:21,205 [INFO] TheHive4API: Creating task 'Investigate User Activity (jmichel)' for case ~122904680
+2025-06-09 19:08:21,216 [INFO] TheHive4API: Creating task 'Prepare for Host Re-imaging' for case ~122904680
+2025-06-09 19:08:21,219 [INFO] TheHive4API: Flagging case ~122904680
+2025-06-09 19:08:21,225 [INFO] TheHive4API: Creating task 'Review Host Logs for Compromise' for case ~122904680
+2025-06-09 19:08:22,940 [INFO] TheHive4API: Task created in case ~122904680
+2025-06-09 19:08:23,455 [INFO] TheHive4API: Task created in case ~122904680
+2025-06-09 19:08:23,954 [INFO] TheHive4API: Task created in case ~122904680
+2025-06-09 19:08:24,576 [INFO] TheHive4API: Task created in case ~122904680
+2025-06-09 19:08:25,293 [INFO] TheHive4API: Case ~122904680 flagged successfully
+2025-06-09 19:08:25,854 [INFO] TheHive4API: Task created in case ~122904680
+2025-06-09 19:08:46,497 [INFO] avicennai: Request completed - ID: unknown - Time: 71.8885s
+2025-06-09 19:39:21,572 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-09 19:39:31,603 [INFO] TheHive4API: Creating case: 'BatTamper Malware Detection on host_8291' (severity: 1)
+2025-06-09 19:39:32,357 [INFO] TheHive4API: Case created: ID ~33008
+2025-06-09 19:39:38,001 [INFO] TheHive4API: Adding hash observable to case ~33008
+2025-06-09 19:39:38,002 [INFO] TheHive4API: Adding hash observable to case ~33008
+2025-06-09 19:39:38,010 [INFO] TheHive4API: Adding hostname observable to case ~33008
+2025-06-09 19:39:38,012 [INFO] TheHive4API: Adding filename observable to case ~33008
+2025-06-09 19:39:38,994 [INFO] TheHive4API: Observable added to case ~33008: ID ~41200
+2025-06-09 19:39:39,343 [INFO] TheHive4API: Observable added to case ~33008: ID ~40988856
+2025-06-09 19:39:39,643 [INFO] TheHive4API: Observable added to case ~33008: ID ~81952888
+2025-06-09 19:39:40,001 [INFO] TheHive4API: Observable added to case ~33008: ID ~45296
+2025-06-09 19:39:43,614 [INFO] SOCAgent: Calling tool virustotal_lookup with query: 748b1f2468f8af45cc3bd1ec0b6dc967a27f2efe1e58882f58821a5279cbf78c
+2025-06-09 19:39:43,618 [INFO] SOCAgent: Calling tool websearch threat with query: BatTamper malware
+2025-06-09 19:40:03,374 [INFO] TheHive4API: Flagging case ~33008
+2025-06-09 19:40:03,376 [INFO] TheHive4API: Creating task 'Isolate host_8291' for case ~33008
+2025-06-09 19:40:03,383 [INFO] TheHive4API: Creating task 'Perform Full AV Scan on host_8291' for case ~33008
+2025-06-09 19:40:03,386 [INFO] TheHive4API: Creating task 'Investigate User Activity (jmichel)' for case ~33008
+2025-06-09 19:40:03,403 [INFO] TheHive4API: Creating task 'Restore host_8291 from Backup (if needed)' for case ~33008
+2025-06-09 19:40:04,432 [INFO] TheHive4API: Task created in case ~33008
+2025-06-09 19:40:04,799 [INFO] TheHive4API: Task created in case ~33008
+2025-06-09 19:40:05,201 [INFO] TheHive4API: Case ~33008 flagged successfully
+2025-06-09 19:40:05,846 [INFO] TheHive4API: Task created in case ~33008
+2025-06-09 19:40:06,197 [INFO] TheHive4API: Task created in case ~33008
+2025-06-09 19:40:07,704 [INFO] TheHive4API: Updating case ~33008
+2025-06-09 19:40:08,571 [INFO] TheHive4API: Case ~33008 updated successfully
+2025-06-09 19:40:23,576 [INFO] avicennai: Request completed - ID: unknown - Time: 62.0038s
+2025-06-09 19:42:09,369 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-09 19:42:09,383 [INFO] avicennai: Request completed - ID: unknown - Time: 0.0136s
+2025-06-09 19:44:51,837 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-09 19:44:51,851 [INFO] avicennai: Request completed - ID: unknown - Time: 0.0139s
+2025-06-09 19:45:39,130 [WARNING] langsmith.client: Failed to send compressed multipart ingest: Connection error caused failure to POST https://api.smith.langchain.com/runs/multipart in LangSmith API. Please confirm your internet connection. ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='api.smith.langchain.com', port=443): Max retries exceeded with url: /runs/multipart (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x7f4ffc5fb150>, 'Connection to api.smith.langchain.com timed out. (connect timeout=10.0)'))"))
+Content-Length: 2130
+API Key: lsv2_********************************************18trace=d95984f0-be79-4410-af63-31edd194fe6a,id=d95984f0-be79-4410-af63-31edd194fe6a
+2025-06-09 19:47:04,466 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-09 19:47:47,739 [WARNING] langsmith.client: Failed to get info from https://api.smith.langchain.com: LangSmithConnectionError('Connection error caused failure to GET /info in LangSmith API. Please confirm your internet connection. ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host=\'api.smith.langchain.com\', port=443): Max retries exceeded with url: /info (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x7fa1e4670a50>, \'Connection to api.smith.langchain.com timed out. (connect timeout=10.0)\'))"))\nContent-Length: None\nAPI Key: lsv2_********************************************18')
+2025-06-10 09:21:41,560 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-10 09:21:49,659 [INFO] avicennai: Request completed - ID: unknown - Time: 8.0988s
+2025-06-10 09:51:06,640 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-10 09:51:06,649 [INFO] avicennai: Request completed - ID: unknown - Time: 0.0089s
+2025-06-10 09:57:30,287 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-10 09:57:30,299 [INFO] avicennai: Request completed - ID: unknown - Time: 0.0125s
+2025-06-10 10:00:22,319 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-10 10:00:22,342 [INFO] avicennai: Request completed - ID: unknown - Time: 0.0236s
+2025-06-10 10:01:40,400 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-10 10:01:40,409 [INFO] avicennai: Request completed - ID: unknown - Time: 0.0092s
+2025-06-10 10:04:45,272 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-10 10:04:45,282 [INFO] avicennai: Request completed - ID: unknown - Time: 0.0101s
+2025-06-10 10:20:45,228 [INFO] avicennai: Request started - ID: unknown - Path: /api/v1/engine/process
+2025-06-10 10:20:45,240 [INFO] avicennai: Request completed - ID: unknown - Time: 0.0120s

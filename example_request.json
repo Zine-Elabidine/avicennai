@@ -1,0 +1,9 @@
+{
+  "action_type": "agent",
+  "agent_name": "soc",
+  "prompt": "I need to analyze suspicious network traffic from IP 192.168.1.100",
+  "answer_mode": "normal",
+  "additional_params": {
+    "explain_selection": true
+  }
+} 
