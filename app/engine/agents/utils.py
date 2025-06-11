@@ -4,11 +4,18 @@ from app.engine.agents.config import agent_config
 import logging
 
 
-
 def init_llm_model(model_name="models/gemini-2.5-flash-preview-05-20", temperature=0):
-
+    """
+    Initialize an LLM model based on the model name.
+    
+    Args:
+        model_name: The name of the model to initialize
+        temperature: Temperature setting for the model
+        
+    Returns:
+        Initialized LLM model instance
+    """
     try:
-
         if model_name == "llama-4.scout-17b":
             model = ChatOpenAI(
                 base_url=agent_config.GROQ_BASE_URL,
@@ -27,7 +34,6 @@ def init_llm_model(model_name="models/gemini-2.5-flash-preview-05-20", temperatu
             )
             print("Using Gemini LLM model: models/gemini-2.5-flash-preview-05-20")
             return model
-
 
         else:
             print(f"Unsupported model name: {model_name}")
@@ -82,3 +88,61 @@ def dict_to_llm_text(additional_params: dict) -> str:
         result.append(f"{key}: {formatted_value}")
     
     return "\n".join(result)
+
+
+def classify_intent_for_rule_generation(user_prompt: str) -> bool:
+    """
+    Simple intent classifier to determine if the user wants to generate a detection rule.
+    
+    Args:
+        user_prompt: The user's input prompt
+        
+    Returns:
+        bool: True if user wants rule generation, False for general conversation
+    """
+    try:
+        # Use a fast, small model for intent classification
+        classifier_model = init_llm_model("llama-4.scout-17b", temperature=0)
+        
+        classification_prompt = f"""You are an intent classifier for a cybersecurity detection engineering assistant.
+
+Determine if the user wants to generate a detection rule or just have a general conversation.
+
+User input: "{user_prompt}"
+
+RULE GENERATION INDICATORS:
+- Asking to create, generate, build, write, develop any detection rule
+- Mentioning specific threats, IOCs, or attack patterns to detect
+- Requesting detection for specific behaviors or activities
+
+CONVERSATION INDICATORS:
+- Greetings, general questions, clarifications, explanations
+- Asking about cybersecurity concepts or methodologies
+- Casual conversation or requests for information
+
+EXAMPLES:
+- "Hello" → conversation
+- "What is MITRE ATT&CK?" → conversation  
+- "Create a rule for detecting malware" → rule_generation
+- "Generate detection for PowerShell attacks" → rule_generation
+- "Can you explain what we just created?" → conversation
+- "Build a rule to catch credential dumping" → rule_generation
+
+Respond with ONLY ONE WORD: "rule_generation" or "conversation" """
+
+        response = classifier_model.invoke([("user", classification_prompt)])
+        result = response.content.strip().lower()
+        
+        # Return True if user wants rule generation
+        if "rule_generation" in result:
+            return True
+        elif "conversation" in result:
+            return False
+        else:
+            # Default to conversation mode if response is unclear
+            return False
+        
+    except Exception as e:
+        print(f"Error in intent classification: {str(e)}")
+        # Default to conversation mode on error
+        return False

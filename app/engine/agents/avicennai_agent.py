@@ -8,7 +8,7 @@ from langgraph.prebuilt import create_react_agent
 
 from app.engine.agents.base import BaseAgent
 from app.engine.agents.config import agent_config
-from app.engine.agents.utils import init_llm_model, dict_to_llm_text
+from app.engine.agents.utils import init_llm_model, dict_to_llm_text, classify_intent_for_rule_generation
 from app.engine.agents.detection_engineering import STAGE_LLM_CONFIG, RULE_TEMPLATES
 from app.engine.agents.prompt_loader import (
     format_metadata_prompt,
@@ -25,7 +25,6 @@ from app.engine.agents.tools.thehive4api_tools import (
 class DetectionAndResponseEngineerAgent(BaseAgent):
 
     def __init__(self, config: Dict[str, Any] = None):
-
         super().__init__(config)
         self.name = "DetectionAndResponseEngineerAgent"
         self.version = "0.0.1"
@@ -33,9 +32,63 @@ class DetectionAndResponseEngineerAgent(BaseAgent):
         self.available_tools = []
         self.agent_config = {"recursion_limit": 80}
         self.system_prompt = ""
+        
+        # Add conversational capabilities
+        self.chat_history = []
+        self.conversational_llm_name = "models/gemini-2.5-flash-preview-05-20"
+        self.conversational_system_prompt = """You are a helpful cybersecurity detection engineering assistant. 
 
-    async def process(self, prompt: str, additional_params: Dict[str, Any] = None) -> str:
+You can help with:
+- General cybersecurity questions and concepts
+- Explaining detection techniques and methodologies  
+- Discussing threat hunting approaches
+- Providing guidance on security operations
+- Explaining SIEM technologies and best practices
+- Discussing cybersecurity frameworks and compliance
+
+You are in CONVERSATION mode. Your role is to have helpful discussions about cybersecurity topics, explain concepts, and answer questions. You should NOT generate detection rules yourself - that's handled by a separate specialized pipeline.
+
+Keep responses concise but informative. Focus on education and guidance rather than rule generation."""
+
+    async def process(self, prompt: str = "", additional_params: Dict[str, Any] = None) -> str:
         additional_params = additional_params or {}
+        
+        # Extract user prompt from chat_history if available, fallback to prompt parameter
+        user_prompt = self._extract_user_prompt_from_chat_history(additional_params, prompt)
+        if not user_prompt:
+            return "No user message found to process."
+        
+        # Add user prompt to chat history
+        self.chat_history.append({"role": "user", "content": user_prompt})
+        
+        # Check if user wants rule generation (has rule_type) or conversation
+        rule_type = additional_params.get("rule_type")
+        
+        if rule_type:
+            # Rule generation mode - rule_type is explicitly provided
+            response = await self._generate_detection_rule(user_prompt, additional_params)
+        else:
+            # Check intent - if they want rule generation but no rule_type, default to query
+            wants_rule = classify_intent_for_rule_generation(user_prompt)
+            if wants_rule:
+                # Default to query rule type
+                additional_params["rule_type"] = "query"
+                response = await self._generate_detection_rule(user_prompt, additional_params)
+            else:
+                # Conversation mode
+                response = await self._handle_conversation(user_prompt, additional_params)
+        
+        # Add assistant response to chat history
+        self.chat_history.append({"role": "assistant", "content": response})
+        
+        # Keep chat history manageable
+        if len(self.chat_history) > 20:
+            self.chat_history = self.chat_history[-20:]
+        
+        return response
+
+    async def _generate_detection_rule(self, prompt: str, additional_params: Dict[str, Any]) -> str:
+        """Generate detection rule using the existing modular pipeline"""
         rule_type = additional_params.get("rule_type", "query")
 
         # === METADATA GENERATION ===
@@ -88,15 +141,67 @@ class DetectionAndResponseEngineerAgent(BaseAgent):
         playbook_yaml = playbook_response.content.strip()
 
         # === CONCATENATE FINAL RULE ===
-        final_yaml = f"---\n{metadata_yaml}\n\n{detection_yaml}\n\n{investigation_yaml}\n\n{playbook_yaml}"
+        final_yaml = f"\n{metadata_yaml}\n\n{detection_yaml}\n\n{investigation_yaml}\n\n{playbook_yaml}"
         print(final_yaml)
         return final_yaml
 
-    async def stream(self, prompt: str, additional_params: Dict[str, Any] = None) -> AsyncGenerator[str, None]:
+    async def _handle_conversation(self, prompt: str, additional_params: Dict[str, Any]) -> str:
+        """Handle general conversation with chat history context"""
+        conversational_model = init_llm_model(self.conversational_llm_name)
+        
+        # Build conversation context
+        messages = [("system", self.conversational_system_prompt)]
+        
+        # Add recent chat history for context (excluding the current prompt we just added)
+        for msg in self.chat_history[:-1]:  # Exclude the last message (current prompt)
+            if msg["role"] == "user":
+                messages.append(("user", msg["content"]))
+            else:
+                messages.append(("assistant", msg["content"]))
+        
+        # Add the current prompt as the final user message
+        messages.append(("user", prompt))
+        
+        response = conversational_model.invoke(messages)
+        return response.content.strip()
+
+    async def stream(self, prompt: str = "", additional_params: Dict[str, Any] = None) -> AsyncGenerator[str, None]:
         """
         Stream response chunks from the Detection and Response Engineer agent.
         """
         additional_params = additional_params or {}
+        
+        # Extract user prompt from chat_history if available, fallback to prompt parameter
+        user_prompt = self._extract_user_prompt_from_chat_history(additional_params, prompt)
+        if not user_prompt:
+            yield "No user message found to process."
+            return
+        
+        # Add user prompt to chat history
+        self.chat_history.append({"role": "user", "content": user_prompt})
+        
+        # Check if user wants rule generation (has rule_type) or conversation
+        rule_type = additional_params.get("rule_type")
+        
+        if rule_type:
+            # Stream rule generation
+            async for chunk in self._stream_rule_generation(user_prompt, additional_params):
+                yield chunk
+        else:
+            # Check intent - if they want rule generation but no rule_type, default to query
+            wants_rule = classify_intent_for_rule_generation(user_prompt)
+            if wants_rule:
+                # Default to query rule type
+                additional_params["rule_type"] = "query"
+                async for chunk in self._stream_rule_generation(user_prompt, additional_params):
+                    yield chunk
+            else:
+                # Stream conversation
+                async for chunk in self._stream_conversation(user_prompt, additional_params):
+                    yield chunk
+
+    async def _stream_rule_generation(self, prompt: str, additional_params: Dict[str, Any]) -> AsyncGenerator[str, None]:
+        """Stream the rule generation process"""
         rule_type = additional_params.get("rule_type", "query")
         chunk_size = 100
         
@@ -186,21 +291,95 @@ class DetectionAndResponseEngineerAgent(BaseAgent):
             await asyncio.sleep(0.1)
             
         yield "\n```"
+        
+        # Build the complete rule for chat history
+        final_yaml = f"{metadata_yaml}\n\n{detection_yaml}\n\n{investigation_yaml}\n\n{playbook_yaml}"
+        complete_response = f"I created a detection rule for credential dumping. Here's what was generated:\n\n```yaml\n{final_yaml}\n```"
+        
+        # Update chat history with the complete response including the rule content
+        self.chat_history.append({"role": "assistant", "content": complete_response})
+        
+        # Keep chat history manageable
+        if len(self.chat_history) > 20:
+            self.chat_history = self.chat_history[-20:]
 
+    async def _stream_conversation(self, prompt: str, additional_params: Dict[str, Any]) -> AsyncGenerator[str, None]:
+        """Stream general conversation responses"""
+        conversational_model = init_llm_model(self.conversational_llm_name)
+        
+        # Build conversation context
+        messages = [("system", self.conversational_system_prompt)]
+        
+        # Add recent chat history for context (excluding the current prompt we just added)
+        for msg in self.chat_history[:-1]:  # Exclude the last message (current prompt)
+            if msg["role"] == "user":
+                messages.append(("user", msg["content"]))
+            else:
+                messages.append(("assistant", msg["content"]))
+        
+        # Add the current prompt as the final user message
+        messages.append(("user", prompt))
+        
+        # Stream the response
+        response = ""
+        async for chunk in conversational_model.astream(messages):
+            if hasattr(chunk, 'content') and chunk.content:
+                response += chunk.content
+                yield chunk.content
+                await asyncio.sleep(0.05)
+        
+        # Add the complete response to chat history
+        self.chat_history.append({"role": "assistant", "content": response})
+        
+        # Keep chat history manageable
+        if len(self.chat_history) > 20:
+            self.chat_history = self.chat_history[-20:]
+
+    def clear_chat_history(self):
+        """Clear the chat history"""
+        self.chat_history = []
+        print("💬 Chat history cleared.")
+
+    def _extract_user_prompt_from_chat_history(self, additional_params: Dict[str, Any], fallback_prompt: str = "") -> str:
+        """
+        Extract the last user message from chat_history in additional_params.
+        
+        Args:
+            additional_params: Dictionary that may contain chat_history
+            fallback_prompt: Fallback prompt if no chat_history found
+            
+        Returns:
+            User prompt string or empty string if not found
+        """
+        # Check if chat_history exists in additional_params
+        chat_history = additional_params.get("chat_history", [])
+        
+        if chat_history and isinstance(chat_history, list):
+            # Find the last user message
+            for message in reversed(chat_history):
+                if isinstance(message, dict) and message.get("role") == "user":
+                    return message.get("content", "")
+        
+        # Fallback to the prompt parameter if no chat_history or no user message found
+        return fallback_prompt
 
     def get_capabilities(self) -> Dict[str, Any]:
-        """
-        Get capabilities of the AvicennaI agent.
-        
-        Returns:
-            Dictionary of capabilities
-        """
         return {
-            "reasoning": True,
-            "tools": self.available_tools,
-            "contexts_supported": ["general", "academic", "research"],
+            "role": "Detection and Response Engineer",
+            "conversational": True,
+            "rule_generation": True,
+            "chat_history": True,
+            "rule_types": [
+                "query",
+                "code", 
+                "lucene_spark",
+                "threat_match",
+                "source_monitor", 
+                "advanced_threshold"
+            ],
             "streaming": True,
-            "max_tokens": 4000
+            "max_tokens": 8000,
+            "chat_history_length": len(self.chat_history)
         }
 
 
