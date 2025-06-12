@@ -1,11 +1,14 @@
 from tavily import TavilyClient
 import json
 import re
+import requests
 from virustotal_python import Virustotal
 from typing import Dict, Any
 from OTXv2 import OTXv2, IndicatorTypes
 import logging
 import os
+from urllib.parse import urlparse
+from bs4 import BeautifulSoup
 
 
 # Configure logging
@@ -680,3 +683,128 @@ def otx_lookup_domain(api_key: str, domain: str) -> dict:
     except Exception as e:
         results["error"] = str(e)
     return results
+
+def url_content_analysis(url: str, search_keywords: str = "") -> Dict[str, Any]:
+    """
+    Visit a specific URL and analyze its content for useful information.
+    
+    Args:
+        url (str): The URL to visit and analyze
+        search_keywords (str, optional): Specific keywords to search for in the content
+        
+    Returns:
+        Dict[str, Any]: A dictionary containing:
+            - url: The original URL
+            - status_code: HTTP response status code
+            - title: Page title if available
+            - content_summary: Brief summary of the page content
+            - keywords_found: Boolean indicating if search keywords were found
+            - security_indicators: Any potential security-related information found
+            - extracted_text: First 1000 characters of cleaned text content
+            - error: Error message if any issues occurred
+    """
+    if not url:
+        raise ValueError("URL must be a non-empty string.")
+    
+    # Ensure URL has a proper scheme
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
+    
+    result = {
+        "url": url,
+        "status_code": None,
+        "title": None,
+        "content_summary": None,
+        "keywords_found": False,
+        "security_indicators": [],
+        "extracted_text": None,
+        "error": None
+    }
+    
+    try:
+        logger.info(f"Calling tool url_content_analysis with URL: {url}")
+        
+        # Set headers to mimic a real browser
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+        }
+        
+        # Make the request with timeout
+        response = requests.get(url, headers=headers, timeout=10, verify=False)
+        result["status_code"] = response.status_code
+        
+        if response.status_code == 200:
+            # Parse HTML content
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Extract title
+            title_tag = soup.find('title')
+            if title_tag:
+                result["title"] = title_tag.get_text().strip()
+            
+            # Remove script and style elements
+            for script in soup(["script", "style"]):
+                script.decompose()
+            
+            # Get text content
+            text_content = soup.get_text()
+            
+            # Clean up text (remove extra whitespace)
+            lines = (line.strip() for line in text_content.splitlines())
+            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+            clean_text = ' '.join(chunk for chunk in chunks if chunk)
+            
+            # Store first 1000 characters for analysis
+            result["extracted_text"] = clean_text[:1000] if clean_text else ""
+            
+            # Create content summary
+            if clean_text:
+                # Take first few sentences for summary
+                sentences = clean_text.split('. ')
+                summary_sentences = sentences[:3] if len(sentences) >= 3 else sentences
+                result["content_summary"] = '. '.join(summary_sentences)
+                if result["content_summary"] and not result["content_summary"].endswith('.'):
+                    result["content_summary"] += '.'
+            
+            # Search for keywords if provided
+            if search_keywords:
+                keywords_list = [kw.strip().lower() for kw in search_keywords.split(',')]
+                text_lower = clean_text.lower()
+                found_keywords = [kw for kw in keywords_list if kw in text_lower]
+                result["keywords_found"] = len(found_keywords) > 0
+                if found_keywords:
+                    result["found_keywords_list"] = found_keywords
+            
+            # Look for security-related indicators
+            security_indicators = []
+            security_keywords = [
+                'malware', 'virus', 'trojan', 'ransomware', 'phishing', 'suspicious',
+                'threat', 'attack', 'exploit', 'vulnerability', 'breach', 'compromise',
+                'infected', 'backdoor', 'rootkit', 'botnet', 'scam', 'fraud'
+            ]
+            
+            text_lower = clean_text.lower()
+            for indicator in security_keywords:
+                if indicator in text_lower:
+                    security_indicators.append(indicator)
+            
+            result["security_indicators"] = list(set(security_indicators))  # Remove duplicates
+            
+        else:
+            result["error"] = f"HTTP {response.status_code}: Unable to fetch content"
+            
+    except requests.exceptions.Timeout:
+        result["error"] = "Request timeout - the server took too long to respond"
+    except requests.exceptions.ConnectionError:
+        result["error"] = "Connection error - unable to reach the URL"
+    except requests.exceptions.RequestException as e:
+        result["error"] = f"Request error: {str(e)}"
+    except Exception as e:
+        result["error"] = f"Unexpected error analyzing URL: {str(e)}"
+        logger.error(f"Error in url_content_analysis tool: {str(e)}")
+    
+    return result

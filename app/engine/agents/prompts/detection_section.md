@@ -161,14 +161,16 @@ exclusions:
 
 </info>
 ### OBJECTIVE
-Generate the **Detection** section of a detection rule of type **{{rule_type}}**, based on the user's request and the standard template. DON'T ADD EXCLUSIONS UNLESS THERE ARE ANY
+Generate the **Detection** section of a detection rule of type **{{rule_type}}**, based on the user's request and the standard template. exclusions are optional, don't add them unless needed.
 
-GIVE UTMOST IMPORTANCE TO THE QUERY FIELD? MUST BE DONE WITH THE HIGHEST PRECSISION
+GIVE UTMOST IMPORTANCE TO THE QUERY FIELD MUST BE DONE WITH THE HIGHEST PRECSISION
 
 ### USER PROMPT
 {{user_prompt}}
 
 {{metadata_block}}
+
+{{current_rule_block}}
 
 ### DETECTION TEMPLATE
 Use this YAML detection section template exactly as structure:

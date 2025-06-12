@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # AvicennAI Engine
 
 ## Description
@@ -377,4 +377,3 @@ THEHIVE_API_URL=http://localhost:9000/api
 4. Copy the key to your `.env` file
 
 The application uses TheHive4py to interact with TheHive API. See `app/engine/agents/tools/thehive4api_tools.py` for available functions.
->>>>>>> 911b303 (mvp commit)

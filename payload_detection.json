@@ -1,0 +1,25 @@
+{
+    "action_type": "agent",
+    "agent_name": "detection_engineer", 
+    "answer_mode": "stream",
+    "prompt": "",
+    "additional_params": {
+        "rule_type": "query",
+        "current_rule": "",
+        "prompt_type": "create",
+        "history": [
+            {
+                "role": "user", 
+                "content": "Hello! I need help with cybersecurity."
+            },
+            {
+                "role": "assistant", 
+                "content": "Hi! I can help with cybersecurity topics."
+            },
+            {
+                "role": "user", 
+                "content": "Create a detection rule for lateral movement"
+            }
+        ]
+    }
+} 

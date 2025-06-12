@@ -16,7 +16,7 @@ from app.engine.agents.prompt_loader import (
     format_investigation_prompt,
     format_playbook_prompt
 )
-from app.engine.agents.tools.toolsv0 import virustotal_lookup, websearch, websearch_threat
+from app.engine.agents.tools.toolsv0 import virustotal_lookup, websearch, websearch_threat, url_content_analysis
 from app.engine.agents.tools.thehive4api_tools import (
     thehive_get_case, thehive_create_case, thehive_update_case,
     thehive_add_observable, thehive_create_task, thehive_flag_case
@@ -61,22 +61,17 @@ Keep responses concise but informative. Focus on education and guidance rather t
         # Add user prompt to chat history
         self.chat_history.append({"role": "user", "content": user_prompt})
         
-        # Check if user wants rule generation (has rule_type) or conversation
-        rule_type = additional_params.get("rule_type")
+        # Always classify intent first
+        wants_rule = classify_intent_for_rule_generation(user_prompt)
         
-        if rule_type:
-            # Rule generation mode - rule_type is explicitly provided
+        if wants_rule:
+            # Rule generation mode - use provided rule_type or default to query
+            if not additional_params.get("rule_type"):
+                additional_params["rule_type"] = "query"
             response = await self._generate_detection_rule(user_prompt, additional_params)
         else:
-            # Check intent - if they want rule generation but no rule_type, default to query
-            wants_rule = classify_intent_for_rule_generation(user_prompt)
-            if wants_rule:
-                # Default to query rule type
-                additional_params["rule_type"] = "query"
-                response = await self._generate_detection_rule(user_prompt, additional_params)
-            else:
-                # Conversation mode
-                response = await self._handle_conversation(user_prompt, additional_params)
+            # Conversation mode
+            response = await self._handle_conversation(user_prompt, additional_params)
         
         # Add assistant response to chat history
         self.chat_history.append({"role": "assistant", "content": response})
@@ -90,11 +85,13 @@ Keep responses concise but informative. Focus on education and guidance rather t
     async def _generate_detection_rule(self, prompt: str, additional_params: Dict[str, Any]) -> str:
         """Generate detection rule using the existing modular pipeline"""
         rule_type = additional_params.get("rule_type", "query")
+        current_rule = additional_params.get("current_rule", "")
+        prompt_type = additional_params.get("prompt_type", "create")
 
         # === METADATA GENERATION ===
         metadata_model_name = STAGE_LLM_CONFIG["metadata"]
         metadata_model = init_llm_model(metadata_model_name)
-        metadata_prompt = format_metadata_prompt(prompt)
+        metadata_prompt = format_metadata_prompt(prompt, current_rule, prompt_type)
         metadata_response = metadata_model.invoke([("user", metadata_prompt)])
         metadata_yaml = metadata_response.content.strip()
 
@@ -106,7 +103,9 @@ Keep responses concise but informative. Focus on education and guidance rather t
             user_prompt=prompt,
             rule_type=rule_type,
             metadata_yaml=metadata_yaml,
-            detection_template=detection_template
+            detection_template=detection_template,
+            current_rule=current_rule,
+            prompt_type=prompt_type
         )
         detection_response = detection_model.invoke([("user", detection_prompt)])
         detection_yaml = detection_response.content.strip()
@@ -120,7 +119,9 @@ Keep responses concise but informative. Focus on education and guidance rather t
             rule_type=rule_type,
             metadata_yaml=metadata_yaml,
             detection_yaml=detection_yaml,
-            investigation_template=investigation_template
+            investigation_template=investigation_template,
+            current_rule=current_rule,
+            prompt_type=prompt_type
         )
         investigation_response = investigation_model.invoke([("user", investigation_prompt)])
         investigation_yaml = investigation_response.content.strip()
@@ -135,7 +136,9 @@ Keep responses concise but informative. Focus on education and guidance rather t
             metadata_yaml=metadata_yaml,
             detection_yaml=detection_yaml,
             investigation_yaml=investigation_yaml,
-            playbook_template=playbook_template
+            playbook_template=playbook_template,
+            current_rule=current_rule,
+            prompt_type=prompt_type
         )
         playbook_response = playbook_model.invoke([("user", playbook_prompt)])
         playbook_yaml = playbook_response.content.strip()
@@ -180,29 +183,25 @@ Keep responses concise but informative. Focus on education and guidance rather t
         # Add user prompt to chat history
         self.chat_history.append({"role": "user", "content": user_prompt})
         
-        # Check if user wants rule generation (has rule_type) or conversation
-        rule_type = additional_params.get("rule_type")
+        # Always classify intent first
+        wants_rule = classify_intent_for_rule_generation(user_prompt)
         
-        if rule_type:
-            # Stream rule generation
+        if wants_rule:
+            # Rule generation mode - use provided rule_type or default to query
+            if not additional_params.get("rule_type"):
+                additional_params["rule_type"] = "query"
             async for chunk in self._stream_rule_generation(user_prompt, additional_params):
                 yield chunk
         else:
-            # Check intent - if they want rule generation but no rule_type, default to query
-            wants_rule = classify_intent_for_rule_generation(user_prompt)
-            if wants_rule:
-                # Default to query rule type
-                additional_params["rule_type"] = "query"
-                async for chunk in self._stream_rule_generation(user_prompt, additional_params):
-                    yield chunk
-            else:
-                # Stream conversation
-                async for chunk in self._stream_conversation(user_prompt, additional_params):
-                    yield chunk
+            # Stream conversation
+            async for chunk in self._stream_conversation(user_prompt, additional_params):
+                yield chunk
 
     async def _stream_rule_generation(self, prompt: str, additional_params: Dict[str, Any]) -> AsyncGenerator[str, None]:
         """Stream the rule generation process"""
         rule_type = additional_params.get("rule_type", "query")
+        current_rule = additional_params.get("current_rule", "")
+        prompt_type = additional_params.get("prompt_type", "create")
         chunk_size = 100
         
         # Send YAML document start marker
@@ -212,7 +211,7 @@ Keep responses concise but informative. Focus on education and guidance rather t
         # === METADATA GENERATION ===
         metadata_model_name = STAGE_LLM_CONFIG["metadata"]
         metadata_model = init_llm_model(metadata_model_name)
-        metadata_prompt = format_metadata_prompt(prompt)
+        metadata_prompt = format_metadata_prompt(prompt, current_rule, prompt_type)
         metadata_response = metadata_model.invoke([("user", metadata_prompt)])
         metadata_yaml = metadata_response.content.strip()
         
@@ -233,7 +232,9 @@ Keep responses concise but informative. Focus on education and guidance rather t
             user_prompt=prompt,
             rule_type=rule_type,
             metadata_yaml=metadata_yaml,
-            detection_template=detection_template
+            detection_template=detection_template,
+            current_rule=current_rule,
+            prompt_type=prompt_type
         )
         detection_response = detection_model.invoke([("user", detection_prompt)])
         detection_yaml = detection_response.content.strip()
@@ -256,7 +257,9 @@ Keep responses concise but informative. Focus on education and guidance rather t
             rule_type=rule_type,
             metadata_yaml=metadata_yaml,
             detection_yaml=detection_yaml,
-            investigation_template=investigation_template
+            investigation_template=investigation_template,
+            current_rule=current_rule,
+            prompt_type=prompt_type
         )
         investigation_response = investigation_model.invoke([("user", investigation_prompt)])
         investigation_yaml = investigation_response.content.strip()
@@ -280,7 +283,9 @@ Keep responses concise but informative. Focus on education and guidance rather t
             metadata_yaml=metadata_yaml,
             detection_yaml=detection_yaml,
             investigation_yaml=investigation_yaml,
-            playbook_template=playbook_template
+            playbook_template=playbook_template,
+            current_rule=current_rule,
+            prompt_type=prompt_type
         )
         playbook_response = playbook_model.invoke([("user", playbook_prompt)])
         playbook_yaml = playbook_response.content.strip()
@@ -342,17 +347,17 @@ Keep responses concise but informative. Focus on education and guidance rather t
 
     def _extract_user_prompt_from_chat_history(self, additional_params: Dict[str, Any], fallback_prompt: str = "") -> str:
         """
-        Extract the last user message from chat_history in additional_params.
+        Extract the last user message from history in additional_params.
         
         Args:
-            additional_params: Dictionary that may contain chat_history
-            fallback_prompt: Fallback prompt if no chat_history found
+            additional_params: Dictionary that may contain history
+            fallback_prompt: Fallback prompt if no history found
             
         Returns:
             User prompt string or empty string if not found
         """
-        # Check if chat_history exists in additional_params
-        chat_history = additional_params.get("chat_history", [])
+        # Check if history exists in additional_params
+        chat_history = additional_params.get("history", [])
         
         if chat_history and isinstance(chat_history, list):
             # Find the last user message
@@ -360,7 +365,7 @@ Keep responses concise but informative. Focus on education and guidance rather t
                 if isinstance(message, dict) and message.get("role") == "user":
                     return message.get("content", "")
         
-        # Fallback to the prompt parameter if no chat_history or no user message found
+        # Fallback to the prompt parameter if no history or no user message found
         return fallback_prompt
 
     def get_capabilities(self) -> Dict[str, Any]:
@@ -396,6 +401,7 @@ class L1SOCAnalyst(BaseAgent):
             websearch, 
             websearch_threat, 
             virustotal_lookup,
+            url_content_analysis,
             thehive_get_case,
             thehive_create_case,
             thehive_update_case,

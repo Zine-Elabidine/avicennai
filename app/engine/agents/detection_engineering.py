@@ -1201,20 +1201,22 @@ from app.engine.agents.prompt_loader import (
     format_playbook_prompt
 )
 
-def build_metadata_prompt(user_prompt: str) -> str:
+def build_metadata_prompt(user_prompt: str, current_rule: str = "", prompt_type: str = "create") -> str:
     """
     Build the metadata prompt using the prompt loader.
     
     Args:
         user_prompt: User's request for rule generation
+        current_rule: Existing rule YAML (for updates)
+        prompt_type: Either 'create' or 'update'
         
     Returns:
         Formatted metadata prompt
     """
-    return format_metadata_prompt(user_prompt)
+    return format_metadata_prompt(user_prompt, current_rule, prompt_type)
 
 
-def build_detection_prompt(user_prompt: str, rule_type: str, metadata_yaml: str = None, include_metadata: bool = True) -> str:
+def build_detection_prompt(user_prompt: str, rule_type: str, metadata_yaml: str = None, include_metadata: bool = True, current_rule: str = "", prompt_type: str = "create") -> str:
     """
     Build the detection prompt using the prompt loader.
     
@@ -1223,6 +1225,8 @@ def build_detection_prompt(user_prompt: str, rule_type: str, metadata_yaml: str 
         rule_type: Type of detection rule
         metadata_yaml: Generated metadata YAML (optional)
         include_metadata: Whether to include metadata in the context
+        current_rule: Existing rule YAML (for updates)
+        prompt_type: Either 'create' or 'update'
         
     Returns:
         Formatted detection prompt
@@ -1237,11 +1241,13 @@ def build_detection_prompt(user_prompt: str, rule_type: str, metadata_yaml: str 
         user_prompt=user_prompt,
         rule_type=rule_type,
         metadata_yaml=metadata_yaml_to_use,
-        detection_template=detection_template
+        detection_template=detection_template,
+        current_rule=current_rule,
+        prompt_type=prompt_type
     )
 
 
-def build_investigation_prompt(user_prompt: str, rule_type: str, metadata_yaml: str = None, detection_yaml: str = None, include_metadata: bool = True, include_detection: bool = True) -> str:
+def build_investigation_prompt(user_prompt: str, rule_type: str, metadata_yaml: str = None, detection_yaml: str = None, include_metadata: bool = True, include_detection: bool = True, current_rule: str = "", prompt_type: str = "create") -> str:
     """
     Build the investigation prompt using the prompt loader.
     
@@ -1252,6 +1258,8 @@ def build_investigation_prompt(user_prompt: str, rule_type: str, metadata_yaml: 
         detection_yaml: Generated detection YAML (optional)
         include_metadata: Whether to include metadata in the context
         include_detection: Whether to include detection in the context
+        current_rule: Existing rule YAML (for updates)
+        prompt_type: Either 'create' or 'update'
         
     Returns:
         Formatted investigation prompt
@@ -1268,11 +1276,13 @@ def build_investigation_prompt(user_prompt: str, rule_type: str, metadata_yaml: 
         rule_type=rule_type,
         metadata_yaml=metadata_yaml_to_use,
         detection_yaml=detection_yaml_to_use,
-        investigation_template=investigation_template
+        investigation_template=investigation_template,
+        current_rule=current_rule,
+        prompt_type=prompt_type
     )
 
 
-def build_playbook_prompt(user_prompt: str, rule_type: str, metadata_yaml: str = None, detection_yaml: str = None, investigation_yaml: str = None, include_metadata: bool = True, include_detection: bool = True, include_investigation: bool = True) -> str:
+def build_playbook_prompt(user_prompt: str, rule_type: str, metadata_yaml: str = None, detection_yaml: str = None, investigation_yaml: str = None, include_metadata: bool = True, include_detection: bool = True, include_investigation: bool = True, current_rule: str = "", prompt_type: str = "create") -> str:
     """
     Build the playbook prompt using the prompt loader.
     
@@ -1285,6 +1295,8 @@ def build_playbook_prompt(user_prompt: str, rule_type: str, metadata_yaml: str =
         include_metadata: Whether to include metadata in the context
         include_detection: Whether to include detection in the context
         include_investigation: Whether to include investigation in the context
+        current_rule: Existing rule YAML (for updates)
+        prompt_type: Either 'create' or 'update'
         
     Returns:
         Formatted playbook prompt
@@ -1303,7 +1315,9 @@ def build_playbook_prompt(user_prompt: str, rule_type: str, metadata_yaml: str =
         metadata_yaml=metadata_yaml_to_use,
         detection_yaml=detection_yaml_to_use,
         investigation_yaml=investigation_yaml_to_use,
-        playbook_template=playbook_template
+        playbook_template=playbook_template,
+        current_rule=current_rule,
+        prompt_type=prompt_type
     )
 
 

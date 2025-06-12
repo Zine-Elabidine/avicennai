@@ -6,6 +6,8 @@ Generate the **Metadata** section of a detection rule based on the user request 
 ### USER PROMPT
 {{user_prompt}}
 
+{{current_rule_block}}
+
 ### REQUIRED FIELDS (YAML Format)
 #### Metadata Section
 
